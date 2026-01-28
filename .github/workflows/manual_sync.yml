@@ -1,7 +1,10 @@
-name: 同步组织项目集
+name: 同步项目集
 
 on:
-  workflow_dispatch: # 支持手动点击运行
+  workflow_dispatch: # 保留手动触发按钮，方便调试
+  repository_dispatch:
+    types: [org_update] # 接收来自 .github 仓库的信号了
+
   # 如果你想每天自动运行一次，可以取消下面两行的注释
   # schedule:
   #   - cron: '0 0 * * *'
