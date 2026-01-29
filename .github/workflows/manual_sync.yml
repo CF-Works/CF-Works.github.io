@@ -1,33 +1,34 @@
-name: 自动同步组织项目
+name: 自动同步并构建网页
 
 on:
-  workflow_dispatch: # 手动运行按钮
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # 每小时整点运行一次
+    - cron: '0 * * * *' # 每小时运行一次
 
 jobs:
-  sync:
+  sync-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v4
+      pages: write      # 赋予部署 Pages 的权限
+      id-token: write
 
-      - name: 获取数据并更新
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 获取数据并更新 config.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORG_NAME: ${{ github.repository_owner }}
         run: |
-          # 1. 获取组织仓库列表
           export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl --limit 100)
           
-          # 2. 执行 Node.js 脚本进行“填空式”替换
           node -e "
             const fs = require('fs');
             const repos = JSON.parse(process.env.REPOS_JSON);
             const owner = process.env.ORG_NAME;
 
-            // 过滤并处理项目数据
             const projects = repos
               .filter(r => r.name !== '.github' && r.name !== owner)
               .map(r => {
@@ -52,21 +53,39 @@ jobs:
                 }
               });
 
-            // 读取并替换 config.js 中的 projects 数组
             const path = 'config.js';
             let content = fs.readFileSync(path, 'utf8');
             const projectsString = JSON.stringify(projects, null, 2);
-            
-            // 匹配 projects: [ ... ] 结构进行替换
+            // 精准替换 projects 数组
             const updatedContent = content.replace(/projects: \[\s*[\s\S]*?\s*\]/, 'projects: ' + projectsString);
-            
             fs.writeFileSync(path, updatedContent);
           "
 
-      - name: 提交更改
+      - name: 提交并推送到仓库
+        # 这一步保证了你的仓库里能看到最新的 config.js
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add config.js
-          git commit -m "auto: 定时同步项目列表" || exit 0
+          git commit -m "auto: 同步项目列表并触发构建" || exit 0
           git push
+
+      # --- 如果你的网页需要 npm 构建，请取消下面部分的注释 ---
+      # - name: 安装依赖并构建
+      #   run: |
+      #     npm install
+      #     npm run build
+      
+      # --- 触发 GitHub Pages 重新部署 ---
+      # 即使是纯静态页面，显式调用这个 action 也能确保 CDN 刷新
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # 如果你有构建目录（如 ./dist），请改为 'dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
