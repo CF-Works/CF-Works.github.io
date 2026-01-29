@@ -25,40 +25,57 @@ jobs:
           export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl --limit 100)
           
           node -e "
-            const fs = require('fs');
-            const repos = JSON.parse(process.env.REPOS_JSON);
-            const owner = process.env.ORG_NAME;
+            try {
+              const fs = require('fs');
+              const repos = JSON.parse(process.env.REPOS_JSON);
+              const owner = process.env.ORG_NAME;
 
-            const projects = repos
-              .filter(r => r.name !== '.github' && r.name !== owner)
-              .map(r => {
-                const hasWebsite = r.homepageUrl && r.homepageUrl.trim() !== '';
-                const desc = r.description || '暂无项目描述';
-                if (hasWebsite) {
-                  return {
-                    title: r.name,
-                    links: [
-                      { url: r.homepageUrl, display: r.homepageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') },
-                      { url: r.url, display: r.url.replace('https://github.com/', '') }
-                    ],
-                    description: desc
-                  };
-                } else {
-                  return {
-                    title: r.name,
-                    url: r.url,
-                    display: r.url.replace('https://github.com/', ''),
-                    description: desc
-                  };
-                }
-              });
+              const projects = repos
+                .filter(r => r.name !== '.github' && r.name !== owner)
+                .map(r => {
+                  const hasWebsite = r.homepageUrl && r.homepageUrl.trim() !== '';
+                  const description = r.description || '暂无项目描述';
+                  
+                  if (hasWebsite) {
+                    // 模式 A: 有 Website，使用 links 数组
+                    return {
+                      title: r.name,
+                      links: [
+                        { 
+                          url: r.homepageUrl, 
+                          display: r.homepageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') 
+                        },
+                        { 
+                          url: r.url, 
+                          display: r.url.replace('https://github.com/', '') 
+                        }
+                      ],
+                      description: description
+                    };
+                  } else {
+                    // 模式 B: 无 Website，直接使用 url 和 display
+                    return {
+                      title: r.name,
+                      url: r.url,
+                      display: r.url.replace('https://github.com/', ''),
+                      description: description
+                    };
+                  }
+                });
 
-            const path = 'config.js';
-            let content = fs.readFileSync(path, 'utf8');
-            const projectsString = JSON.stringify(projects, null, 2);
-            // 精准替换 projects 数组
-            const updatedContent = content.replace(/projects: \[\s*[\s\S]*?\s*\]/, 'projects: ' + projectsString);
-            fs.writeFileSync(path, updatedContent);
+              const path = 'config.js';
+              let content = fs.readFileSync(path, 'utf8');
+              const projectsString = JSON.stringify(projects, null, 2);
+              
+              // 替换 config.js 中的 projects 数组内容
+              content = content.replace(/projects: \[\s*[\s\S]*?\s*\]/, 'projects: ' + projectsString);
+              
+              fs.writeFileSync(path, content);
+              console.log('✅ 成功同步 ' + projects.length + ' 个项目（根据 Website 自动切换结构）');
+            } catch (err) {
+              console.error(err);
+              process.exit(1);
+            }
           "
 
       - name: 提交并推送到仓库
