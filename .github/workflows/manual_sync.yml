@@ -1,14 +1,13 @@
-name: 自动同步并构建网页
+name: 自动同步项目列表
 
 on:
-  workflow_dispatch: # 支持手动点击运行
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # 每小时自动巡逻同步一次
+    - cron: '0 * * * *'
 
 jobs:
-  sync-and-deploy:
+  sync:
     runs-on: ubuntu-latest
-    # 授予权限：写仓库内容、写 Pages、写 ID 令牌
     permissions:
       contents: write
       pages: write
@@ -18,30 +17,26 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 获取数据并重构 config.js
+      - name: 获取数据并局部更新 config.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORG_NAME: ${{ github.repository_owner }}
         run: |
-          # 1. 使用 GitHub CLI 获取组织内所有公开仓库
           export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl --limit 100)
           
-          # 2. 运行 Node 脚本全量重写 config.js
           node -e "
           try {
             const fs = require('fs');
             const repos = JSON.parse(process.env.REPOS_JSON);
             const owner = process.env.ORG_NAME;
 
-            // 转换数据逻辑
-            const projects = repos
+            // 1. 准备新的项目数组
+            const newProjects = repos
               .filter(r => r.name !== '.github' && r.name !== owner)
               .map(r => {
                 const hasWebsite = r.homepageUrl && r.homepageUrl.trim() !== '';
                 const desc = r.description || '暂无项目描述';
-                
                 if (hasWebsite) {
-                  // 模式 A：有 Website，生成 links 数组
                   return {
                     title: r.name,
                     links: [
@@ -51,7 +46,6 @@ jobs:
                     description: desc
                   };
                 } else {
-                  // 模式 B：无 Website，生成单 url
                   return {
                     title: r.name,
                     url: r.url,
@@ -61,47 +55,40 @@ jobs:
                 }
               });
 
-            // 直接定义完整的配置模板，确保格式百分之百正确
-            const configTemplate = {
-              siteTitle: 'CF-Works组织の项目集',
-              siteSubtitle: 'cloudflare项目',
-              githubUsername: 'cf-works',
-              copyrightStartYear: '2025',
-              siteInfo: {
-                enabled: true,
-                title: '关于这个页面',
-                paragraphs: ['存放一些CloudFlare成熟的项目']
-              },
-              projects: projects
-            };
+            // 2. 读取当前文件内容
+            const path = 'config.js';
+            let content = fs.readFileSync(path, 'utf8');
 
-            // 写入文件，采用 ESM 格式 (export const config = ...)
-            const fileContent = 'export const config = ' + JSON.stringify(configTemplate, null, 2) + ';';
-            fs.writeFileSync('config.js', fileContent);
-            console.log('✅ config.js 格式重构成功，共同步 ' + projects.length + ' 个项目');
+            // 3. 提取对象 (兼容 export const config = { ... })
+            // 将内容转换为可解析的 JSON 字符串
+            const jsonPart = content.replace(/export\s+const\s+config\s+=\s+/, '').replace(/;\s*$/, '');
+            const configObj = JSON.parse(jsonPart);
+
+            // 4. 只替换 projects 数组
+            configObj.projects = newProjects;
+
+            // 5. 写回文件
+            const finalContent = 'export const config = ' + JSON.stringify(configObj, null, 2) + ';';
+            fs.writeFileSync(path, finalContent);
+            console.log('✅ 项目列表同步完成，其余手动配置已保留。');
           } catch (err) {
-            console.error('❌ 执行失败:', err.message);
+            console.error('❌ 处理失败，请检查 config.js 格式是否为标准 JSON 对象:', err.message);
             process.exit(1);
           }
           "
 
-      - name: 提交并推送源码
-        # 这一步会将修复后的 config.js 存回 Git 仓库
+      - name: 提交并推送
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add config.js
-          git commit -m "auto: 重构并同步项目列表" || exit 0
+          git commit -m "auto: 仅同步项目数据" || exit 0
           git push
 
-      - name: 设置 Pages
-        uses: actions/configure-pages@v4
-        
-      - name: 上传网页构建产物
+      - name: 部署到 Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.' # 您的 index.html 在根目录
-
-      - name: 部署至 GitHub Pages
-        id: deployment
+          path: '.'
+      
+      - name: 部署
         uses: actions/deploy-pages@v4
