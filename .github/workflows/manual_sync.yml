@@ -2,8 +2,10 @@ name: 自动同步项目列表
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
+  repository_dispatch:
+    types: [org-webhook]
+  #schedule:
+    #- cron: '0 * * * *'
 
 jobs:
   sync:
