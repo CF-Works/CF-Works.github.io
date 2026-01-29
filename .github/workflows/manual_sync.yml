@@ -5,7 +5,7 @@ on:
   repository_dispatch:
     types: [org-webhook]
 
-# 防止并发任务冲突（当短时间内连续创建/删除仓库时）
+# 核心改进：防止并发导致的 git push 冲突
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -22,28 +22,25 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          # 获取完整历史以确保推送成功
-          fetch-depth: 0
+          fetch-depth: 0 # 保证 git push 顺畅
 
       - name: 获取数据并局部更新 config.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 建议直接指定组织名，防止 context 漂移
+          # 明确指定组织名，确保 Webhook 触发时上下文准确
           ORG_NAME: "CF-Works" 
         run: |
-          # 获取公开仓库列表
-          export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl,stargazersCount --limit 100)
+          export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl --limit 100)
           
+          # 这里是你原封不动的 Node 逻辑
           node -e "
           try {
             const fs = require('fs');
             const repos = JSON.parse(process.env.REPOS_JSON);
             const owner = process.env.ORG_NAME;
 
-            // 1. 过滤并排序（按星标数降序，可按需修改）
             const newProjects = repos
-              .filter(r => r.name !== '.github' && r.name !== owner && r.name !== owner.toLowerCase() + '.github.io')
-              .sort((a, b) => b.stargazersCount - a.stargazersCount)
+              .filter(r => r.name !== '.github' && r.name !== owner)
               .map(r => {
                 const hasWebsite = r.homepageUrl && r.homepageUrl.trim() !== '';
                 const desc = r.description || '暂无项目描述';
@@ -68,30 +65,13 @@ jobs:
 
             const path = 'config.js';
             let content = fs.readFileSync(path, 'utf8');
+            const jsonPart = content.replace(/export\s+const\s+config\s+=\s+/, '').replace(/;\s*$/, '');
+            const configObj = JSON.parse(jsonPart);
 
-            // 2. 增强型正则：匹配 export const config = { ... };
-            // 这种方式比 JSON.parse 更安全，能保留文件中的注释和格式
-            const regex = /(export\s+const\s+config\s+=\s+)(\{[\s\S]*?\})(\s*;?)/;
-            const match = content.match(regex);
-            
-            if (match) {
-              // 注意：这里由于你的 config.js 不是标准 JSON (可能有方法或末尾逗号)，
-              // 我们通过构造对象再替换字符串的方式来确保 projects 被更新
-              let configObj;
-              try {
-                // 尝试解析，如果失败则回退到简单的 key 替换
-                configObj = eval('(' + match[2] + ')');
-                configObj.projects = newProjects;
-                const updatedConfig = JSON.stringify(configObj, null, 2);
-                content = content.replace(regex, '$1' + updatedConfig + '$3');
-              } catch(e) {
-                // 如果 eval 失败（格式太复杂），则直接用正则替换 projects 数组部分
-                const projectsRegex = /(projects:\s*\[)[\s\S]*?(\])/;
-                content = content.replace(projectsRegex, '$1' + JSON.stringify(newProjects, null, 2).slice(1, -1) + '$2');
-              }
-            }
+            configObj.projects = newProjects;
 
-            fs.writeFileSync(path, content);
+            const finalContent = 'export const config = ' + JSON.stringify(configObj, null, 2) + ';';
+            fs.writeFileSync(path, finalContent);
             console.log('✅ 项目列表同步完成');
           } catch (err) {
             console.error('❌ 处理失败:', err.message);
@@ -104,16 +84,17 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add config.js
-          if git commit -m "auto: 同步项目列表 [skip ci]"; then
+          # 加上 [skip ci] 防止死循环触发，并检查是否有变化
+          if git commit -m "auto: 仅同步项目数据 [skip ci]"; then
             git push
           else
-            echo "没有变化需要提交"
+            echo "No changes to commit"
           fi
 
-      - name: 上传 Artifact
+      - name: 部署到 Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
-      - name: 部署到 Pages
+      - name: 执行部署
         uses: actions/deploy-pages@v4
