@@ -26,12 +26,6 @@ export const config = {
       "description": "暂无项目描述"
     },
     {
-      "title": "ceshu",
-      "url": "https://github.com/CF-Works/ceshu",
-      "display": "CF-Works/ceshu",
-      "description": "暂无项目描述"
-    },
-    {
       "title": "Rin",
       "links": [
         {
