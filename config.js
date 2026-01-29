@@ -1,6 +1,6 @@
 // config.js
 export const config = {
-  siteTitle: "星霜の项目集",
+  siteTitle: "CF-Works组织の项目集",
   siteSubtitle: "cloudflare项目",
 
   githubUsername: "cf-works",
@@ -12,7 +12,7 @@ export const config = {
     enabled: true,  // ← 改成 false 即可完全关闭说明区域（不占位）
     title: "关于这个页面",
     paragraphs: [
-      "cloudflare的一下成熟的项目"
+      "存放一些CloudFlare成熟的项目"
     ]
   },
 
