@@ -1,0 +1,77 @@
+name: 自动同步项目列表
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [org-webhook]
+
+# 下面是具体的任务代码...
+
+# 🔒 最小权限原则（按需开启）
+permissions:
+  contents: read
+  issues: write    # 如需自动创建 Issue
+  pull-requests: write # 如需评论 PR
+
+jobs:
+  process:
+    name: 处理 ${{ github.event.client_payload.github_event }} @ ${{ github.event.client_payload.repo }}
+    runs-on: ubuntu-latest
+    env:
+      EVENT_REPO: ${{ github.event.client_payload.repo }}
+      EVENT_ACTION: ${{ github.event.client_payload.action }}
+      EVENT_TYPE: ${{ github.event.client_payload.github_event }}
+      EVENT_SENDER: ${{ github.event.client_payload.sender }}
+    
+    steps:
+      # 🔍 1. 安全验证：仅处理 CF-Works 组织仓库事件
+      - name: 验证来源组织
+        run: |
+          if [[ ! "$EVENT_REPO" =~ ^CF-Works/ ]]; then
+            echo "⚠️ 拒绝非 CF-Works 仓库事件: $EVENT_REPO"
+            exit 1
+          fi
+          echo "✅ 事件来源验证通过: $EVENT_REPO"
+
+      # 📦 2. 打印结构化日志（调试神器）
+      - name: 显示事件详情
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📍 仓库: $EVENT_REPO"
+          echo "⚡ 事件类型: $EVENT_TYPE ($EVENT_ACTION)"
+          echo "👤 触发者: $EVENT_SENDER"
+          echo "🕒 处理时间: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "💡 提示: 在 Actions 日志中搜索 '📍' 快速定位事件"
+
+      # 🌰 3. 智能响应示例（按需启用）
+      - name: 📌 为含 "security" 的仓库创建安全复查 Issue
+        if: ${{ contains(env.EVENT_REPO, 'security') && env.EVENT_TYPE == 'push' }}
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "🔍 安全复查: ${{ env.EVENT_REPO }} 新推送"
+          content: |
+            **仓库**: `${{ env.EVENT_REPO }}`  
+            **推送者**: `${{ env.EVENT_SENDER }}`  
+            **时间**: `${{ github.event.client_payload.timestamp }}`  
+            **建议**: 检查本次推送是否含敏感配置/依赖漏洞  
+            ---
+            *由 CF-Works 组织事件中枢自动创建 | [查看 Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+          labels: security, auto-created
+
+      - name: 💬 在 PR 打开时自动评论（示例）
+        if: ${{ env.EVENT_TYPE == 'pull_request' && env.EVENT_ACTION == 'opened' }}
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            🌐 **CF-Works 组织规范提醒**  
+            您的 PR 已被组织事件中枢捕获！  
+            ✅ 请确认：  
+            - [ ] 已通过安全扫描  
+            - [ ] 符合组织代码规范  
+            *（此评论由自动化流程生成）*
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 🧪 4. 本地测试命令（无需等待真实事件！）
+      # 在中央仓库目录执行：
+      # gh workflow run listen.yml -f event_type=org-webhook -f client_payload='{"repo":"CF-Works/test-repo","action":"push","sender":"test","github_event":"push","timestamp":"2024-06-15T10:00:00Z"}'
