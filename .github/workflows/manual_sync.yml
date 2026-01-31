@@ -5,96 +5,147 @@ on:
   repository_dispatch:
     types: [org-webhook]
 
-# 核心改进：防止并发导致的 git push 冲突
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  sync:
+  sync-data:
+    name: 同步项目数据
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pages: write
-      id-token: write
-
+    outputs:
+      has_changes: ${{ steps.check.outputs.changed }}
+      commit_sha: ${{ steps.commit.outputs.sha }}
+    
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 保证 git push 顺畅
 
-      - name: 获取数据并局部更新 config.js
+      - name: 同步项目列表到 config.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 明确指定组织名，确保 Webhook 触发时上下文准确
-          ORG_NAME: "CF-Works" 
+          ORG_NAME: CF-Works
         run: |
-          export REPOS_JSON=$(gh repo list $ORG_NAME --visibility=public --json name,url,description,homepageUrl --limit 100)
+          echo "📡 正在获取组织仓库列表..."
+          REPOS_JSON=$(gh repo list "$ORG_NAME" \
+            --visibility public \
+            --json name,url,description,homepageUrl \
+            --limit 100)
           
-          # 这里是你原封不动的 Node 逻辑
-          node -e "
-          try {
-            const fs = require('fs');
-            const repos = JSON.parse(process.env.REPOS_JSON);
-            const owner = process.env.ORG_NAME;
+          echo "🔄 更新 config.js..."
+          node << 'EOF'
+          const fs = require('fs');
+          const repos = JSON.parse(process.env.REPOS_JSON);
+          const owner = process.env.ORG_NAME;
 
-            const newProjects = repos
-              .filter(r => r.name !== '.github' && r.name !== owner)
-              .map(r => {
-                const hasWebsite = r.homepageUrl && r.homepageUrl.trim() !== '';
-                const desc = r.description || '暂无项目描述';
-                if (hasWebsite) {
-                  return {
-                    title: r.name,
-                    links: [
-                      { url: r.homepageUrl, display: r.homepageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') },
-                      { url: r.url, display: r.url.replace('https://github.com/', '') }
-                    ],
-                    description: desc
-                  };
-                } else {
-                  return {
-                    title: r.name,
-                    url: r.url,
-                    display: r.url.replace('https://github.com/', ''),
-                    description: desc
-                  };
-                }
-              });
+          const newProjects = repos
+            .filter(r => r.name !== '.github' && r.name !== owner)
+            .map(r => {
+              const baseObj = {
+                title: r.name,
+                description: r.description || '暂无项目描述'
+              };
 
-            const path = 'config.js';
-            let content = fs.readFileSync(path, 'utf8');
-            const jsonPart = content.replace(/export\s+const\s+config\s+=\s+/, '').replace(/;\s*$/, '');
-            const configObj = JSON.parse(jsonPart);
+              if (r.homepageUrl?.trim()) {
+                return {
+                  ...baseObj,
+                  links: [
+                    { 
+                      url: r.homepageUrl, 
+                      display: r.homepageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') 
+                    },
+                    { 
+                      url: r.url, 
+                      display: r.url.replace('https://github.com/', '') 
+                    }
+                  ]
+                };
+              }
+              
+              return {
+                ...baseObj,
+                url: r.url,
+                display: r.url.replace('https://github.com/', '')
+              };
+            });
 
-            configObj.projects = newProjects;
+          const configPath = 'config.js';
+          const content = fs.readFileSync(configPath, 'utf8');
+          const configObj = JSON.parse(
+            content.replace(/export\s+const\s+config\s+=\s+/, '').replace(/;\s*$/, '')
+          );
 
-            const finalContent = 'export const config = ' + JSON.stringify(configObj, null, 2) + ';';
-            fs.writeFileSync(path, finalContent);
-            console.log('✅ 项目列表同步完成');
-          } catch (err) {
-            console.error('❌ 处理失败:', err.message);
-            process.exit(1);
-          }
-          "
+          configObj.projects = newProjects;
 
-      - name: 提交并推送
+          fs.writeFileSync(
+            configPath, 
+            `export const config = ${JSON.stringify(configObj, null, 2)};`
+          );
+
+          console.log(`✅ 已同步 ${newProjects.length} 个项目`);
+          EOF
+
+      - name: 检查是否有变更
+        id: check
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
           git add config.js
-          # 加上 [skip ci] 防止死循环触发，并检查是否有变化
-          if git commit -m "auto: 仅同步项目数据 [skip ci]"; then
-            git push
+          if git diff --staged --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "📌 config.js 无变化，跳过部署"
           else
-            echo "No changes to commit"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ config.js 已更新"
           fi
 
-      - name: 部署到 Pages
+      - name: 提交变更
+        id: commit
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 提交前先拉取（防止并发冲突）
+          git pull --rebase origin ${{ github.ref_name }} || true
+          
+          git commit -m "chore: 自动更新项目列表 [skip ci]"
+          git push
+          
+          # 输出新的 commit SHA 用于部署
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "🚀 已推送 commit: $(git rev-parse --short HEAD)"
+
+  deploy-pages:
+    name: 部署到 GitHub Pages
+    needs: sync-data
+    if: needs.sync-data.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    
+    # Pages 部署专用环境
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: 检出最新代码
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.sync-data.outputs.commit_sha }}  # 使用刚才的提交
+
+      - name: 上传到 Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: .
 
       - name: 执行部署
+        id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: 部署完成
+        run: |
+          echo "✅ 部署成功"
+          echo "🌐 访问地址: ${{ steps.deployment.outputs.page_url }}"
