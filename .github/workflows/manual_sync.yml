@@ -136,4 +136,6 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: 部署完成
-        run: echo "✅ 部署成功，访问地址: ${{ steps.deployment.outputs.page_url }}"
+        run: |
+          echo "✅ 部署成功"
+          echo "🌐 访问地址: ${{ steps.deployment.outputs.page_url }}"
