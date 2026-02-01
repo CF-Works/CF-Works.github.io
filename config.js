@@ -54,6 +54,20 @@ export const config = {
       "description": "cloudflare email 邮箱  临时邮箱 邮件发送 mail"
     },
     {
+      "title": "warden-worker",
+      "links": [
+        {
+          "url": "http://warden.qqnt.de/",
+          "display": "warden.qqnt.de"
+        },
+        {
+          "url": "https://github.com/CF-Works/warden-worker",
+          "display": "CF-Works/warden-worker"
+        }
+      ],
+      "description": "A Bitwarden-compatible server for Cloudflare Workers"
+    },
+    {
       "title": "cloudflare-manager",
       "url": "https://github.com/CF-Works/cloudflare-manager",
       "display": "CF-Works/cloudflare-manager",
