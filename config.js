@@ -12,6 +12,12 @@ export const config = {
   },
   "projects": [
     {
+      "title": "CF-AIChat",
+      "url": "https://github.com/CF-Works/CF-AIChat",
+      "display": "CF-Works/CF-AIChat",
+      "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
+    },
+    {
       "title": "CF-Works.github.io",
       "links": [
         {
