@@ -26,6 +26,20 @@ export const config = {
       "description": "暂无项目描述"
     },
     {
+      "title": "CloudFlare-ImgBed",
+      "links": [
+        {
+          "url": "https://cfbed.sanyue.de",
+          "display": "cfbed.sanyue.de"
+        },
+        {
+          "url": "https://github.com/CF-Works/CloudFlare-ImgBed",
+          "display": "CF-Works/CloudFlare-ImgBed"
+        }
+      ],
+      "description": "Open-source file hosting solution based on CloudFlare  (Image hosting/File storage/Cloud drive) / 基于 CloudFlare 的开源文件托管解决方案（图床/文件床/网盘）"
+    },
+    {
       "title": "CF-AIChat",
       "url": "https://github.com/CF-Works/CF-AIChat",
       "display": "CF-Works/CF-AIChat",
