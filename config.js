@@ -12,12 +12,6 @@ export const config = {
   },
   "projects": [
     {
-      "title": "CF-AIChat",
-      "url": "https://github.com/CF-Works/CF-AIChat",
-      "display": "CF-Works/CF-AIChat",
-      "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
-    },
-    {
       "title": "CF-Works.github.io",
       "links": [
         {
@@ -30,6 +24,26 @@ export const config = {
         }
       ],
       "description": "暂无项目描述"
+    },
+    {
+      "title": "CF-AIChat",
+      "url": "https://github.com/CF-Works/CF-AIChat",
+      "display": "CF-Works/CF-AIChat",
+      "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
+    },
+    {
+      "title": "BroadcastChannel",
+      "links": [
+        {
+          "url": "https://tg.xingshuang.xyz",
+          "display": "tg.xingshuang.xyz"
+        },
+        {
+          "url": "https://github.com/CF-Works/BroadcastChannel",
+          "display": "CF-Works/BroadcastChannel"
+        }
+      ],
+      "description": "将你的 Telegram Channel 转为微博客。使用ai增加了模糊搜索（单频道搜索，全局搜索），标签聚合，多频道(筛选)，深色模式功能。"
     },
     {
       "title": "Rin",
