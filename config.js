@@ -12,6 +12,12 @@ export const config = {
   },
   "projects": [
     {
+      "title": "-Channel-AI-Digest",
+      "url": "https://github.com/CF-Works/-Channel-AI-Digest",
+      "display": "CF-Works/-Channel-AI-Digest",
+      "description": "暂无项目描述"
+    },
+    {
       "title": "CF-Works.github.io",
       "links": [
         {
