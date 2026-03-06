@@ -108,6 +108,12 @@ export const config = {
       "description": "一个强大的Cloudflare多账号Workers批量管理系统，支持账号管理、批量操作、实时监控和Workers脚本管理。"
     },
     {
+      "title": "web-archive",
+      "url": "https://github.com/CF-Works/web-archive",
+      "display": "CF-Works/web-archive",
+      "description": "Free web archiving and sharing service based on Cloudflare. 基于 Cloudflare 的免费网页归档和分享工具。"
+    },
+    {
       "title": "WARP-Clash-API",
       "url": "https://github.com/CF-Works/WARP-Clash-API",
       "display": "CF-Works/WARP-Clash-API",
