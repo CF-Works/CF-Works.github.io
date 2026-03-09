@@ -12,24 +12,10 @@ export const config = {
   },
   "projects": [
     {
-      "title": "-Channel-AI-Digest",
-      "url": "https://github.com/CF-Works/-Channel-AI-Digest",
-      "display": "CF-Works/-Channel-AI-Digest",
-      "description": "暂无项目描述"
-    },
-    {
-      "title": "CF-Works.github.io",
-      "links": [
-        {
-          "url": "http://www.xingshuang.de5.net/",
-          "display": "www.xingshuang.de5.net"
-        },
-        {
-          "url": "https://github.com/CF-Works/CF-Works.github.io",
-          "display": "CF-Works/CF-Works.github.io"
-        }
-      ],
-      "description": "暂无项目描述"
+      "title": "MailWatch-AI",
+      "url": "https://github.com/CF-Works/MailWatch-AI",
+      "display": "CF-Works/MailWatch-AI",
+      "description": "可视化管理邮箱，AI 自动总结新邮件，通过 Webhook 推送到飞书/钉钉/Slack 等平台。"
     },
     {
       "title": "CloudFlare-ImgBed",
@@ -50,6 +36,20 @@ export const config = {
       "url": "https://github.com/CF-Works/CF-AIChat",
       "display": "CF-Works/CF-AIChat",
       "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
+    },
+    {
+      "title": "CF-Works.github.io",
+      "links": [
+        {
+          "url": "http://www.xingshuang.de5.net/",
+          "display": "www.xingshuang.de5.net"
+        },
+        {
+          "url": "https://github.com/CF-Works/CF-Works.github.io",
+          "display": "CF-Works/CF-Works.github.io"
+        }
+      ],
+      "description": "暂无项目描述"
     },
     {
       "title": "BroadcastChannel",
