@@ -12,10 +12,18 @@ export const config = {
   },
   "projects": [
     {
-      "title": "MailWatch-AI",
-      "url": "https://github.com/CF-Works/MailWatch-AI",
-      "display": "CF-Works/MailWatch-AI",
-      "description": "可视化管理邮箱，AI 自动总结新邮件，通过 Webhook 推送到飞书/钉钉/Slack 等平台。"
+      "title": "nodewarden",
+      "links": [
+        {
+          "url": "https://nodewarden.app",
+          "display": "nodewarden.app"
+        },
+        {
+          "url": "https://github.com/CF-Works/nodewarden",
+          "display": "CF-Works/nodewarden"
+        }
+      ],
+      "description": "Bitwarden-compatible server running on Cloudflare Workers"
     },
     {
       "title": "CloudFlare-ImgBed",
@@ -32,10 +40,10 @@ export const config = {
       "description": "Open-source file hosting solution based on CloudFlare  (Image hosting/File storage/Cloud drive) / 基于 CloudFlare 的开源文件托管解决方案（图床/文件床/网盘）"
     },
     {
-      "title": "CF-AIChat",
-      "url": "https://github.com/CF-Works/CF-AIChat",
-      "display": "CF-Works/CF-AIChat",
-      "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
+      "title": "MailWatch-AI",
+      "url": "https://github.com/CF-Works/MailWatch-AI",
+      "display": "CF-Works/MailWatch-AI",
+      "description": "可视化管理邮箱，AI 自动总结新邮件，通过 Webhook 推送到飞书/钉钉/Slack 等平台。"
     },
     {
       "title": "CF-Works.github.io",
@@ -50,6 +58,12 @@ export const config = {
         }
       ],
       "description": "暂无项目描述"
+    },
+    {
+      "title": "CF-AIChat",
+      "url": "https://github.com/CF-Works/CF-AIChat",
+      "display": "CF-Works/CF-AIChat",
+      "description": "基于 Cloudflare Workers AI 的多功能聊天应用，免部署服务器，完全免费。"
     },
     {
       "title": "BroadcastChannel",
